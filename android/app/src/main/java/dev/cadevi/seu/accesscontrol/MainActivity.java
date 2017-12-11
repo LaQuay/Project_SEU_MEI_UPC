@@ -1,5 +1,6 @@
 package dev.cadevi.seu.accesscontrol;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
@@ -8,7 +9,7 @@ import android.view.MenuItem;
 import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
-
+    private BluetoothController bluetoothController;
     private TextView mTextMessage;
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
@@ -36,9 +37,31 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mTextMessage = (TextView) findViewById(R.id.message);
-        BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
+        mTextMessage = findViewById(R.id.message);
+        BottomNavigationView navigation = findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
+
+        startBluetooth();
     }
 
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        stopBluetooth();
+    }
+
+    private void startBluetooth() {
+        bluetoothController = BluetoothController.getInstance(this);
+        bluetoothController.startServices();
+        bluetoothController.setListeners();
+    }
+
+    private void stopBluetooth() {
+        bluetoothController.stopAll();
+    }
+
+    public void myOnActivityResult(int requestCode, int resultCode, Intent data) {
+        bluetoothController.onActivityResult(requestCode, resultCode, data);
+        //handler.postDelayed(testBT, 1000);
+    }
 }
