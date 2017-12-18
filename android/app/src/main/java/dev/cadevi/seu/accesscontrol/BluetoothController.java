@@ -36,7 +36,6 @@ public class BluetoothController {
             public void onDataReceived(byte[] data, String message) {
                 // Do something when data incoming
                 Log.e(TAG, "Rebut: " + message);
-
             }
         });
 
@@ -89,7 +88,7 @@ public class BluetoothController {
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.e(TAG, "onActivityResult()" + ", requestCode: " + requestCode + ", requestCode: " + requestCode + ", data: " + data);
+        Log.e(TAG, "onActivityResult()" + ", requestCode: " + requestCode + ", resultCode: " + resultCode + ", data: " + data);
         if (requestCode == BluetoothState.REQUEST_CONNECT_DEVICE) {
             if (resultCode == Activity.RESULT_OK) {
                 bt.connect(data);

@@ -26,4 +26,5 @@ dependencies {
     implementation 'com.android.support.constraint:constraint-layout:1.0.2'
 
     compile 'com.akexorcist:bluetoothspp:1.0.0'
+    compile 'com.karumi:dexter:4.2.0'
 }
