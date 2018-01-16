@@ -6,18 +6,14 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.MenuItem;
 import android.widget.TextView;
 
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
-import com.karumi.dexter.listener.PermissionDeniedResponse;
-import com.karumi.dexter.listener.PermissionGrantedResponse;
 import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
-import com.karumi.dexter.listener.single.PermissionListener;
 
 import java.util.List;
 
@@ -65,8 +61,7 @@ public class MainActivity extends AppCompatActivity {
                 ).withListener(new MultiplePermissionsListener() {
             @Override
             public void onPermissionsChecked(MultiplePermissionsReport report) {
-                boolean allPermissionsChecked =
-                        report.getGrantedPermissionResponses().size() == permissions;
+                boolean allPermissionsChecked = report.getGrantedPermissionResponses().size() == permissions;
 
                 if (allPermissionsChecked) {
                     startBluetooth();
@@ -96,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
         bluetoothController.stopAll();
     }
 
-    public void myOnActivityResult(int requestCode, int resultCode, Intent data) {
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
         bluetoothController.onActivityResult(requestCode, resultCode, data);
         //handler.postDelayed(testBT, 1000);
     }
