@@ -114,18 +114,6 @@ public class BluetoothController {
                 result.getDevice().connectGatt(mContext, false, btleGattCallback);
             }
         }
-
-        @Override
-        public void onBatchScanResults(List<ScanResult> results) {
-            super.onBatchScanResults(results);
-            Log.e(TAG, "onBatchScanResults");
-        }
-
-        @Override
-        public void onScanFailed(int errorCode) {
-            super.onScanFailed(errorCode);
-            Log.e(TAG, "onScanFailed");
-        }
     };
 
     protected BluetoothController(Context context) {
