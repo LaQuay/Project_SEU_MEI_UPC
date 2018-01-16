@@ -1,27 +1,139 @@
 package dev.cadevi.seu.accesscontrol;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothManager;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanFilter;
+import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
 import android.util.Log;
-import android.widget.Toast;
 
-import app.akexorcist.bluetotohspp.library.BluetoothSPP;
-import app.akexorcist.bluetotohspp.library.BluetoothState;
-import app.akexorcist.bluetotohspp.library.DeviceList;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 
-//http://stackoverflow.com/questions/6732716/service-discovery-fail-bluetooth-chat-connection-using-spp
-//http://stackoverflow.com/questions/3397071/service-discovery-failed-exception-using-bluetooth-on-android
 public class BluetoothController {
+    public static final int REQUEST_ENABLE_BT = 288;
     private static final String TAG = BluetoothController.class.getSimpleName();
-    private static BluetoothController instance = null;
-    private BluetoothSPP bt;
+    private static BluetoothController instance;
+    private final String pepitoBLE = "00:15:83:00:8B:4D";
+    private final UUID pepitoUUID = UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb");
+    private final UUID characteristicUUID = UUID.fromString("0000ffe1-0000-1000-8000-00805f9b34fb");
+
+    private BluetoothGatt bluetoothGatt;
+    private BluetoothGattCharacteristic bluetoothGattCharacteristic;
+
+    private BluetoothAdapter mBluetoothAdapter;
     private Context mContext;
+    private Handler mHandler = new Handler();
+    // Device connect call back
+    private final BluetoothGattCallback btleGattCallback = new BluetoothGattCallback() {
+        @Override
+        public void onConnectionStateChange(final BluetoothGatt gatt, final int status, final int newState) {
+            // this will get called when a device connects or disconnects
+            bluetoothGatt = gatt;
+            switch (newState) {
+                case 0:
+                    Log.e(TAG, "Device Disconnected");
+                    break;
+                case 2:
+                    Log.e(TAG, "Device Connected: "
+                            + bluetoothGatt.getDevice().getName() + ", " + bluetoothGatt.getDevice().getAddress());
+
+                    // discover services and characteristics for this device
+                    bluetoothGatt.discoverServices();
+
+                    break;
+                default:
+                    Log.e(TAG, "Unknown state");
+
+                    break;
+            }
+        }
+
+        @Override
+        public void onServicesDiscovered(final BluetoothGatt gatt, final int status) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                Log.e(TAG, "onServicesDiscovered - Success: GATT_SUCCESS");
+                bluetoothGattCharacteristic =
+                        bluetoothGatt.getService(pepitoUUID).getCharacteristic(characteristicUUID);
+
+                // Enable the client notification for READING
+                gatt.setCharacteristicNotification(bluetoothGattCharacteristic, true);
+
+                //sendData("");
+                readData();
+            } else {
+                Log.e(TAG, "onServicesDiscovered - Fail: " + status);
+            }
+        }
+
+        @Override
+        // Result of a characteristic read operation
+        public void onCharacteristicRead(BluetoothGatt gatt,
+                                         BluetoothGattCharacteristic characteristic, int status) {
+            Log.e(TAG, "onCharacteristicRead, charact: " + characteristic.getUuid() + " status: "
+                    + status + ", value: " + Arrays.toString(characteristic.getValue()));
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+            }
+        }
+
+        @Override
+        public void onCharacteristicWrite(BluetoothGatt gatt,
+                                          BluetoothGattCharacteristic characteristic, int status) {
+            Log.e(TAG, "onCharacteristicWrite, charact: " + characteristic.getUuid() + " status: "
+                    + status + ", value: " + Arrays.toString(characteristic.getValue()));
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+            }
+        }
+
+        @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic) {
+            Log.e(TAG, "onCharacteristicChanged, value: " + Arrays.toString(characteristic.getValue()));
+        }
+    };
+    private boolean connectingToBluetoothDevice;
+    //result.getScanRecord().getServiceUuids() to get UUID
+    private ScanCallback mLeScanCallback = new ScanCallback() {
+        @Override
+        public void onScanResult(int callbackType, ScanResult result) {
+            super.onScanResult(callbackType, result);
+            Log.e(TAG, "onScanResult: " + result.getDevice().getName() + ", " + result.getDevice().getAddress());
+            if (result.getDevice().getAddress().equals(pepitoBLE) && !connectingToBluetoothDevice) {
+                Log.e(TAG, "Found, connecting " + result.getDevice().getName() + ", " + result.getDevice().getAddress());
+                connectingToBluetoothDevice = true;
+                result.getDevice().connectGatt(mContext, false, btleGattCallback);
+            }
+        }
+
+        @Override
+        public void onBatchScanResults(List<ScanResult> results) {
+            super.onBatchScanResults(results);
+            Log.e(TAG, "onBatchScanResults");
+        }
+
+        @Override
+        public void onScanFailed(int errorCode) {
+            super.onScanFailed(errorCode);
+            Log.e(TAG, "onScanFailed");
+        }
+    };
 
     protected BluetoothController(Context context) {
         this.mContext = context;
-
-        bt = new BluetoothSPP(context);
+        // Initializes Bluetooth adapter.
+        final BluetoothManager bluetoothManager =
+                (BluetoothManager) context.getSystemService(Context.BLUETOOTH_SERVICE);
+        mBluetoothAdapter = bluetoothManager.getAdapter();
     }
 
     public static BluetoothController getInstance(Context context) {
@@ -31,78 +143,71 @@ public class BluetoothController {
         return instance;
     }
 
-    public void setListeners() {
-        bt.setOnDataReceivedListener(new BluetoothSPP.OnDataReceivedListener() {
-            public void onDataReceived(byte[] data, String message) {
-                // Do something when data incoming
-                Log.e(TAG, "Rebut: " + message);
-
-            }
-        });
-
-        bt.setBluetoothConnectionListener(new BluetoothSPP.BluetoothConnectionListener() {
-            public void onDeviceConnected(String name, String address) {
-                // Do something when successfully connected
-                Log.e(TAG, "onDeviceConnected(), name: " + name + ", address: " + address);
-            }
-
-            public void onDeviceDisconnected() {
-                // Do something when connection was disconnected
-                Log.e(TAG, "onDeviceDisconnected()");
-            }
-
-            public void onDeviceConnectionFailed() {
-                // Do something when connection failed
-                Log.e(TAG, "onDeviceConnectionFailed()");
-            }
-        });
-
-        bt.setBluetoothStateListener(new BluetoothSPP.BluetoothStateListener() {
-            public void onServiceStateChanged(int state) {
-                if (state == BluetoothState.STATE_CONNECTED) {
-                    // Do something when successfully connected
-                    Log.e(TAG, "State changed to: STATE_CONNECTED");
-                } else if (state == BluetoothState.STATE_CONNECTING) {
-                    // Do something while connecting
-                    Log.e(TAG, "State changed to: STATE_CONNECTING");
-                } else if (state == BluetoothState.STATE_LISTEN) {
-                    // Do something when device is waiting for connection
-                    Log.e(TAG, "State changed to: STATE_LISTEN");
-                } else if (state == BluetoothState.STATE_NONE) {
-                    // Do something when device don't have any connection
-                    Log.e(TAG, "State changed to: STATE_NONE");
-                }
-            }
-        });
-    }
-
     public void startServices() {
-        if (!bt.isBluetoothEnabled() || !bt.isBluetoothAvailable()) {
-            Toast.makeText(mContext, "Si us plau, engega el BT, BT no disponible", Toast.LENGTH_SHORT).show();
+        // Ensures Bluetooth is available on the device and it is enabled. If not,
+        // displays a dialog requesting user permission to enable Bluetooth.
+        if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            ((Activity) mContext).startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
         } else {
-            bt.setupService();
-            bt.startService(BluetoothState.DEVICE_OTHER);
-
-            Intent intent = new Intent(mContext.getApplicationContext(), DeviceList.class);
-            ((Activity) mContext).startActivityForResult(intent, BluetoothState.REQUEST_CONNECT_DEVICE);
+            scanBTLEDevices();
         }
     }
 
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.e(TAG, "onActivityResult()" + ", requestCode: " + requestCode + ", requestCode: " + requestCode + ", data: " + data);
-        if (requestCode == BluetoothState.REQUEST_CONNECT_DEVICE) {
-            if (resultCode == Activity.RESULT_OK) {
-                bt.connect(data);
+    public void scanBTLEDevices() {
+        Log.e(TAG, "scanBTLEDevices");
+        final BluetoothLeScanner bluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+
+        int SCAN_PERIOD = 3000;
+        // Stops scanning after a pre-defined scan period.
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                bluetoothLeScanner.stopScan(mLeScanCallback);
             }
+        }, SCAN_PERIOD);
+
+        connectingToBluetoothDevice = false;
+
+        ScanFilter scanFilter = new ScanFilter.Builder()
+                .setDeviceAddress(pepitoBLE)
+                .build();
+        List<ScanFilter> listScanFilter = new ArrayList<>();
+        listScanFilter.add(scanFilter);
+        ScanSettings settings = new ScanSettings.Builder().build();
+        bluetoothLeScanner.startScan(listScanFilter, settings, mLeScanCallback);
+    }
+
+    public void stopScanBTLEDevices() {
+        Log.e(TAG, "stopScanBTLEDevices");
+        BluetoothLeScanner bluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
+
+        connectingToBluetoothDevice = false;
+        bluetoothLeScanner.stopScan(mLeScanCallback);
+        if (bluetoothGatt != null) {
+            bluetoothGatt.disconnect();
         }
     }
 
     public void stopAll() {
-        instance = null;
-        bt.stopService();
+        stopScanBTLEDevices();
+    }
+
+    public void readData() {
+        // Stops scanning after a pre-defined scan period.
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                bluetoothGatt.readCharacteristic(bluetoothGattCharacteristic);
+                mHandler.postDelayed(this, 500);
+            }
+        }, 500);
     }
 
     public void sendData(String text) {
-        bt.send(text, true);
+        byte[] value = new byte[1];
+        value[0] = (byte) (21 & 0xFF);
+        bluetoothGattCharacteristic.setValue(value);
+        bluetoothGatt.writeCharacteristic(bluetoothGattCharacteristic);
     }
 }
