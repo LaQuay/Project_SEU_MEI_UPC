@@ -1,4 +1,4 @@
-package dev.cadevi.seu.accesscontrol;
+package dev.cadevi.seu.accesscontrol.controllers;
 
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -32,6 +32,9 @@ public class BluetoothController {
 
     private BluetoothGatt bluetoothGatt;
     private BluetoothGattCharacteristic bluetoothGattCharacteristic;
+
+    private ReadReceived readReceivedCallback;
+
     // Device connect call back
     private final BluetoothGattCallback btleGattCallback = new BluetoothGattCallback() {
         @Override
@@ -117,7 +120,7 @@ public class BluetoothController {
         }
     };
 
-    protected BluetoothController(Context context) {
+    private BluetoothController(Context context) {
         this.mContext = context;
         // Initializes Bluetooth adapter.
         final BluetoothManager bluetoothManager =
@@ -186,6 +189,7 @@ public class BluetoothController {
         try {
             String text = new String(bytes, "UTF-8");
             Log.e(TAG, "Reading data: " + text);
+            readReceivedCallback.onReadReceived(text);
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
@@ -201,5 +205,13 @@ public class BluetoothController {
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
+    }
+
+    public void setCallbackReadRequest(ReadReceived callbackReadRequest) {
+        readReceivedCallback = callbackReadRequest;
+    }
+
+    public interface ReadReceived {
+        void onReadReceived(String valueReceived);
     }
 }
