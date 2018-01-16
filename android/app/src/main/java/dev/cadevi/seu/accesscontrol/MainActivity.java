@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
@@ -81,8 +80,7 @@ public class MainActivity extends AppCompatActivity {
         mSendImageButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Log.e(TAG, "Enviando datos");
-                BluetoothController.getInstance(getApplicationContext()).sendData("");
+                BluetoothController.getInstance(getApplicationContext()).sendData("HOLA");
             }
         });
     }

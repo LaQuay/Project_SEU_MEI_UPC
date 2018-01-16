@@ -16,6 +16,7 @@ import android.content.Intent;
 import android.os.Handler;
 import android.util.Log;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -31,10 +32,6 @@ public class BluetoothController {
 
     private BluetoothGatt bluetoothGatt;
     private BluetoothGattCharacteristic bluetoothGattCharacteristic;
-
-    private BluetoothAdapter mBluetoothAdapter;
-    private Context mContext;
-    private Handler mHandler = new Handler();
     // Device connect call back
     private final BluetoothGattCallback btleGattCallback = new BluetoothGattCallback() {
         @Override
@@ -70,8 +67,7 @@ public class BluetoothController {
                 // Enable the client notification for READING
                 gatt.setCharacteristicNotification(bluetoothGattCharacteristic, true);
 
-                //sendData("");
-                readData();
+                Log.e(TAG, "Characteristic available");
             } else {
                 Log.e(TAG, "onServicesDiscovered - Fail: " + status);
             }
@@ -99,8 +95,13 @@ public class BluetoothController {
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic) {
             Log.e(TAG, "onCharacteristicChanged, value: " + Arrays.toString(characteristic.getValue()));
+
+            readData(characteristic.getValue());
         }
     };
+    private BluetoothAdapter mBluetoothAdapter;
+    private Context mContext;
+    private Handler mHandler = new Handler();
     private boolean connectingToBluetoothDevice;
     //result.getScanRecord().getServiceUuids() to get UUID
     private ScanCallback mLeScanCallback = new ScanCallback() {
@@ -181,21 +182,24 @@ public class BluetoothController {
         stopScanBTLEDevices();
     }
 
-    public void readData() {
-        // Stops scanning after a pre-defined scan period.
-        mHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                bluetoothGatt.readCharacteristic(bluetoothGattCharacteristic);
-                mHandler.postDelayed(this, 500);
-            }
-        }, 500);
+    public void readData(byte[] bytes) {
+        try {
+            String text = new String(bytes, "UTF-8");
+            Log.e(TAG, "Reading data: " + text);
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
     }
 
+    // MTU max 23 Bytes
     public void sendData(String text) {
-        byte[] value = new byte[1];
-        value[0] = (byte) (21 & 0xFF);
-        bluetoothGattCharacteristic.setValue(value);
-        bluetoothGatt.writeCharacteristic(bluetoothGattCharacteristic);
+        byte[] value;
+        try {
+            value = text.getBytes("UTF-8");
+            bluetoothGattCharacteristic.setValue(value);
+            bluetoothGatt.writeCharacteristic(bluetoothGattCharacteristic);
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
     }
 }
