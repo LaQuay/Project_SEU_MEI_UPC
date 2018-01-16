@@ -5,7 +5,6 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
@@ -22,22 +21,22 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
-//https://github.com/joelwass/Android-BLE-Connect-Example/blob/master/app/src/main/java/com/example/joelwasserman/androidbleconnectexample/MainActivity.java
 public class BluetoothController {
     public static final int REQUEST_ENABLE_BT = 288;
     private static final String TAG = BluetoothController.class.getSimpleName();
     private static BluetoothController instance;
     private final String pepitoBLE = "00:15:83:00:8B:4D";
     private final UUID pepitoUUID = UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb");
-    BluetoothGatt bluetoothGatt;
+    private final UUID characteristicUUID = UUID.fromString("0000ffe1-0000-1000-8000-00805f9b34fb");
+
+    private BluetoothGatt bluetoothGatt;
+    private BluetoothGattCharacteristic bluetoothGattCharacteristic;
+
+    private BluetoothAdapter mBluetoothAdapter;
+    private Context mContext;
+    private Handler mHandler = new Handler();
     // Device connect call back
     private final BluetoothGattCallback btleGattCallback = new BluetoothGattCallback() {
-        @Override
-        public void onCharacteristicChanged(BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic) {
-            // this will get called anytime you perform a read or write characteristic operation
-            Log.e(TAG, "onCharacteristicChanged" + Arrays.toString(characteristic.getValue()));
-        }
-
         @Override
         public void onConnectionStateChange(final BluetoothGatt gatt, final int status, final int newState) {
             // this will get called when a device connects or disconnects
@@ -63,20 +62,16 @@ public class BluetoothController {
 
         @Override
         public void onServicesDiscovered(final BluetoothGatt gatt, final int status) {
-            // this will get called after the client initiates a BluetoothGatt.discoverServices() call
-
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.e(TAG, "onServicesDiscovered - Success: GATT_SUCCESS");
-                for (BluetoothGattService service : bluetoothGatt.getServices()) {
-                    List<BluetoothGattCharacteristic> characteristicList = service.getCharacteristics();
+                bluetoothGattCharacteristic =
+                        bluetoothGatt.getService(pepitoUUID).getCharacteristic(characteristicUUID);
 
-                    for (BluetoothGattCharacteristic characteristic : characteristicList) {
-                        if (characteristic != null) {
-                            Log.e(TAG, "Characteristics1: " + characteristic.getUuid()
-                                    + ", perm: " + characteristic.getPermissions());
-                        }
-                    }
-                }
+                // Enable the client notification for READING
+                gatt.setCharacteristicNotification(bluetoothGattCharacteristic, true);
+
+                //sendData("");
+                readData();
             } else {
                 Log.e(TAG, "onServicesDiscovered - Fail: " + status);
             }
@@ -86,26 +81,26 @@ public class BluetoothController {
         // Result of a characteristic read operation
         public void onCharacteristicRead(BluetoothGatt gatt,
                                          BluetoothGattCharacteristic characteristic, int status) {
-            Log.e(TAG, "onCharacteristicRead" + status);
+            Log.e(TAG, "onCharacteristicRead, charact: " + characteristic.getUuid() + " status: "
+                    + status + ", value: " + Arrays.toString(characteristic.getValue()));
             if (status == BluetoothGatt.GATT_SUCCESS) {
-
-                gatt.readCharacteristic(characteristic);
             }
         }
 
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt,
                                           BluetoothGattCharacteristic characteristic, int status) {
-            Log.e(TAG, "onCharacteristicWrite" + status);
+            Log.e(TAG, "onCharacteristicWrite, charact: " + characteristic.getUuid() + " status: "
+                    + status + ", value: " + Arrays.toString(characteristic.getValue()));
             if (status == BluetoothGatt.GATT_SUCCESS) {
-
             }
         }
+
+        @Override
+        public void onCharacteristicChanged(BluetoothGatt gatt, final BluetoothGattCharacteristic characteristic) {
+            Log.e(TAG, "onCharacteristicChanged, value: " + Arrays.toString(characteristic.getValue()));
+        }
     };
-    private BluetoothAdapter mBluetoothAdapter;
-    private Context mContext;
-    private boolean mScanning;
-    private Handler mHandler = new Handler();
     private boolean connectingToBluetoothDevice;
     //result.getScanRecord().getServiceUuids() to get UUID
     private ScanCallback mLeScanCallback = new ScanCallback() {
@@ -148,13 +143,9 @@ public class BluetoothController {
         return instance;
     }
 
-    public void setListeners() {
-    }
-
     public void startServices() {
         // Ensures Bluetooth is available on the device and it is enabled. If not,
         // displays a dialog requesting user permission to enable Bluetooth.
-        Log.e(TAG, "mBluetoothAdapter: " + mBluetoothAdapter + ", mBluetoothAdapter.isEnabled: " + mBluetoothAdapter.isEnabled());
         if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             ((Activity) mContext).startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
@@ -172,12 +163,10 @@ public class BluetoothController {
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                mScanning = false;
                 bluetoothLeScanner.stopScan(mLeScanCallback);
             }
         }, SCAN_PERIOD);
 
-        mScanning = true;
         connectingToBluetoothDevice = false;
 
         ScanFilter scanFilter = new ScanFilter.Builder()
@@ -193,17 +182,10 @@ public class BluetoothController {
         Log.e(TAG, "stopScanBTLEDevices");
         BluetoothLeScanner bluetoothLeScanner = mBluetoothAdapter.getBluetoothLeScanner();
 
-        mScanning = false;
         connectingToBluetoothDevice = false;
         bluetoothLeScanner.stopScan(mLeScanCallback);
-    }
-
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        Log.e(TAG, "onActivityResult()" + ", requestCode: " + requestCode + ", requestCode: " + requestCode + ", data: " + data);
-        if (requestCode == REQUEST_ENABLE_BT) {
-            if (resultCode == Activity.RESULT_OK) {
-                Log.d(TAG, data.getDataString());
-            }
+        if (bluetoothGatt != null) {
+            bluetoothGatt.disconnect();
         }
     }
 
@@ -211,10 +193,21 @@ public class BluetoothController {
         stopScanBTLEDevices();
     }
 
-    public void sendData(String text) {
+    public void readData() {
+        // Stops scanning after a pre-defined scan period.
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                bluetoothGatt.readCharacteristic(bluetoothGattCharacteristic);
+                mHandler.postDelayed(this, 500);
+            }
+        }, 500);
     }
 
-    private void broadcastUpdate(final BluetoothGattCharacteristic characteristic) {
-        Log.e(TAG, "broadcastUpdate: " + characteristic.getUuid());
+    public void sendData(String text) {
+        byte[] value = new byte[1];
+        value[0] = (byte) (21 & 0xFF);
+        bluetoothGattCharacteristic.setValue(value);
+        bluetoothGatt.writeCharacteristic(bluetoothGattCharacteristic);
     }
 }
