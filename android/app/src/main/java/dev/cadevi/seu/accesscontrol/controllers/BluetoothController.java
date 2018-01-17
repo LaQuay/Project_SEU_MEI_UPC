@@ -215,8 +215,9 @@ public class BluetoothController {
         }
     }
 
-    public void setCallbackReadRequest(ReadReceived callbackReadRequest) {
-        readReceivedCallback = callbackReadRequest;
+    public void setCallbacks(BluetoothStatus bluetoothStatusCallback, ReadReceived callbackReadRequest) {
+        this.bluetoothStatusCallback = bluetoothStatusCallback;
+        this.readReceivedCallback = callbackReadRequest;
     }
 
     public interface BluetoothStatus {

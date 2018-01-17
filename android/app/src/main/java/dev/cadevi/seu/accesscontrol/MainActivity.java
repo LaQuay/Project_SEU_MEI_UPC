@@ -34,8 +34,10 @@ public class MainActivity extends AppCompatActivity implements BluetoothControll
     private TextView accessName;
     private TextView accessStatus;
     private Button mSendImageButton;
+    private View mColorAccess;
 
     private BluetoothController.ReadReceived readReceivedCallback = this;
+    private BluetoothController.BluetoothStatus bluetoothStatusCallback = this;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +48,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothControll
         accessName = findViewById(R.id.tv_access_name);
         accessStatus = findViewById(R.id.tv_access_status);
         mSendImageButton = findViewById(R.id.button_send);
+        mColorAccess = findViewById(R.id.view_status);
 
         final int permissions = 4;
         Dexter.withActivity(this)
@@ -87,7 +90,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothControll
     private void startBluetooth() {
         bluetoothController = BluetoothController.getInstance(this);
         bluetoothController.startServices();
-        bluetoothController.setCallbackReadRequest(readReceivedCallback);
+        bluetoothController.setCallbacks(bluetoothStatusCallback, readReceivedCallback);
     }
 
     private void stopBluetooth() {
@@ -103,11 +106,25 @@ public class MainActivity extends AppCompatActivity implements BluetoothControll
                     public void onResponse(JSONObject response) {
                         Log.d("Response", response.toString());
                         try {
-                            String access = response.getString("acces");
-                            String userName = response.getString("name");
+                            final String access = response.getString("acces");
+                            final String userName = response.getString("name");
 
-                            accessName.setText(access);
-                            accessStatus.setText(userName);
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    accessName.setText(userName);
+
+                                    if (access.equals("true")) {
+                                        accessStatus.setText(getString(R.string.access_granted));
+                                        mColorAccess.setBackgroundColor(getResources().getColor(R.color.colorAccessOK));
+                                        BluetoothController.getInstance(getApplicationContext()).sendData("1");
+                                    } else {
+                                        accessStatus.setText(getString(R.string.access_denied));
+                                        mColorAccess.setBackgroundColor(getResources().getColor(R.color.colorAccessFail));
+                                        BluetoothController.getInstance(getApplicationContext()).sendData("0");
+                                    }
+                                }
+                            });
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
@@ -144,7 +161,13 @@ public class MainActivity extends AppCompatActivity implements BluetoothControll
                     text = getString(R.string.bluetooth_ready);
                     break;
             }
-            bluetoothStatusTextView.setText(text);
+            final String finalText = text;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    bluetoothStatusTextView.setText(finalText);
+                }
+            });
         }
     }
 }

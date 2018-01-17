@@ -8,7 +8,7 @@
     tools:context="dev.cadevi.seu.accesscontrol.MainActivity">
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="10dp">
@@ -26,14 +26,14 @@
     </LinearLayout>
 
     <LinearLayout
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
         <View
             android:id="@+id/view_status"
             android:layout_width="match_parent"
-            android:layout_height="100dp"
+            android:layout_height="150dp"
             android:layout_margin="20dp" />
 
         <LinearLayout
@@ -78,6 +78,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="SEND"
-        android:visibility="gone" />
+        android:visibility="visible" />
 
 </LinearLayout>

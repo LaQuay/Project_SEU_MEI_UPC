@@ -5,4 +5,7 @@
     <string name="bluetooth_connected">Connected</string>
     <string name="bluetooth_disconnected">Disconnected</string>
     <string name="bluetooth_ready">Connected and ready</string>
+
+    <string name="access_granted">Access granted</string>
+    <string name="access_denied">Access denied</string>
 </resources>
