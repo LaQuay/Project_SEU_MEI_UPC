@@ -24,9 +24,13 @@ import java.util.UUID;
 
 public class BluetoothController {
     public static final int REQUEST_ENABLE_BT = 288;
+    public static final int BLUETOOTH_CONNECTING = 1;
+    public static final int BLUETOOTH_CONNECTED = 2;
+    public static final int BLUETOOTH_READY = 3;
+    public static final int BLUETOOTH_DISCONNECTED = 4;
     private static final String TAG = BluetoothController.class.getSimpleName();
     private static BluetoothController instance;
-    private final String pepitoBLE = "00:15:83:00:8B:4D";
+    public final String pepitoBLE = "00:15:83:00:8B:4D";
     private final UUID pepitoUUID = UUID.fromString("0000ffe0-0000-1000-8000-00805f9b34fb");
     private final UUID characteristicUUID = UUID.fromString("0000ffe1-0000-1000-8000-00805f9b34fb");
 
@@ -34,6 +38,7 @@ public class BluetoothController {
     private BluetoothGattCharacteristic bluetoothGattCharacteristic;
 
     private ReadReceived readReceivedCallback;
+    private BluetoothStatus bluetoothStatusCallback;
 
     // Device connect call back
     private final BluetoothGattCallback btleGattCallback = new BluetoothGattCallback() {
@@ -44,6 +49,7 @@ public class BluetoothController {
             switch (newState) {
                 case 0:
                     Log.e(TAG, "Device Disconnected");
+                    bluetoothStatusCallback.onBluetoothChanged(BLUETOOTH_DISCONNECTED);
                     break;
                 case 2:
                     Log.e(TAG, "Device Connected: "
@@ -51,6 +57,7 @@ public class BluetoothController {
 
                     // discover services and characteristics for this device
                     bluetoothGatt.discoverServices();
+                    bluetoothStatusCallback.onBluetoothChanged(BLUETOOTH_CONNECTED);
 
                     break;
                 default:
@@ -71,6 +78,7 @@ public class BluetoothController {
                 gatt.setCharacteristicNotification(bluetoothGattCharacteristic, true);
 
                 Log.e(TAG, "Characteristic available");
+                bluetoothStatusCallback.onBluetoothChanged(BLUETOOTH_READY);
             } else {
                 Log.e(TAG, "onServicesDiscovered - Fail: " + status);
             }
@@ -209,6 +217,10 @@ public class BluetoothController {
 
     public void setCallbackReadRequest(ReadReceived callbackReadRequest) {
         readReceivedCallback = callbackReadRequest;
+    }
+
+    public interface BluetoothStatus {
+        void onBluetoothChanged(int bluetoothStatus);
     }
 
     public interface ReadReceived {

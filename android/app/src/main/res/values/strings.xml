@@ -1,6 +1,8 @@
 <resources>
     <string name="app_name">AccessControl</string>
-    <string name="title_home">Home</string>
-    <string name="title_dashboard">Dashboard</string>
-    <string name="title_notifications">Notifications</string>
+
+    <string name="bluetooth_connecting">Connecting</string>
+    <string name="bluetooth_connected">Connected</string>
+    <string name="bluetooth_disconnected">Disconnected</string>
+    <string name="bluetooth_ready">Connected and ready</string>
 </resources>
